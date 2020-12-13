@@ -12,9 +12,8 @@ Computer vision course project- Hand pose estimation
 
 ### Assignment 2
 
-- Improve the accuracy of the hand pose estimation network you implemented in the Assignment 2 using **Data Augmentation, Data Generation** methods or changing the network architecture etc.
-
-- Develop a new function for the hand pose estimation network that can **classify `Rock-paper-scissors’** poses according to their estimated poses. It may require collecting some **new data and their annotation**s for the classification labels.
+- Improve the accuracy of the hand pose estimation network you implemented in the Assignment 2 using **Data Augmentation, Data Generation** methods or **changing the network architecture** etc.
+- Develop a **new function** for the hand pose estimation network that can **classify `Rock-paper-scissors’** poses according to their estimated poses. It may require collecting some **new data and their annotation**s for the classification labels.
 
 ## Reference
 

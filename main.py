@@ -239,8 +239,6 @@ def main():
     batchSize = 16
     learningRate = 1e-5
 
-    """ Fine-tuning the model is required in the problem 2
-        Please remove these annotations to run the code of problem 2 """
     # trainer = Trainer(epochs, batchSize, learningRate)
     # trainer.train()
 
