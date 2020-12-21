@@ -48,6 +48,41 @@ class ObmanDataset(Dataset):
 
         return new_x_data, self.y_data[idx]
 
+class RPSDataset(Dataset):
+    def __init__(self, method=None, ):
+        self.root = './'
+        self.x_data = []
+        self.y_data = []
+        if method == 'train':
+            self.img_path = sorted(glob(self.root + 'dataset/rps/train/' + '*.png'))
+
+        elif method == 'test':
+            self.img_path = sorted(glob(self.root + 'dataset/rps/test/' + '*.png'))
+
+        for i in tqdm.tqdm(range(len(self.img_path))):
+            img = cv2.imread(self.img_path[i], cv2.IMREAD_COLOR)
+            img = cv2.resize(img, dsize=(256, 256), interpolation=cv2.INTER_AREA)
+            b, g, r = cv2.split(img)
+            img = cv2.merge([r, g, b])
+            self.x_data.append(img)
+
+            str_label = self.img_path[i].split('.')[1].split('/')[-1].split('0')[0]
+            if str_label == 'paper':
+                label = np.array([0, 1, 0])
+            elif str_label == 'rock':
+                label = np.array([1, 0, 0])
+            else:   # str_label == scissor:
+                label = np.array([0, 0, 1])
+            self.y_data.append(label)
+
+    def __len__(self):
+        return len(self.img_path)
+
+    def __getitem__(self, idx):
+        transform1 = torchvision.transforms.ToTensor()
+        new_x_data = transform1(self.x_data[idx])
+
+        return new_x_data, self.y_data[idx]
 
 class Trainer(object):
     def __init__(self, epochs, batch_size, lr):
