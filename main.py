@@ -2,6 +2,7 @@ from model import CPM2DPose, RPSClassifier
 import torch
 import numpy as np
 import torchvision
+import torch.optim.lr_scheduler as lr_scheduler
 import tqdm
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
@@ -138,7 +139,8 @@ class Trainer(object):
     def train(self):
 
         criterion = torch.nn.MSELoss()
-        optimizer = torch.optim.Adam(self.poseNet.parameters(), lr=self.learning_rate, betas=(0.9, 0.999), eps=1e-08)
+        optimizer = torch.optim.Adam(self.poseNet.parameters(), lr=self.learning_rate, betas=(0.9, 0.999), eps=1e-08, weight_decay = 5*1e-6, amsgrad = True)
+        scheduler = lr_scheduler.ReduceLROnPlateau(optimizer)
 
         date = '201201'
         for epoch in tqdm.tqdm(range(self.epochs + 1)):
@@ -189,7 +191,7 @@ class Tester(object):
         if flag == 0:
             weight_PATH = weight_root + 'pretrained_weight.pth'     # pretrained model (problem 1)
         else:
-            weight_PATH = weight_root + 'finetunedweight.pth'     # fine-tuned model (problem 3)
+            weight_PATH = weight_root + 'fine40.pth'     # fine-tuned model (problem 3)
         self.poseNet.load_state_dict(torch.load(weight_PATH))
 
         print("Testing...")
@@ -228,7 +230,7 @@ class Tester(object):
             for i in range(x_test.shape[0]):
                 err += self.calc_error(y_test[i].numpy(), skeletons_in[i])
 
-        avg_err = err/500
+        avg_err = err/930
 
         if self.flag == 0:
             print('Average error of pretrained model = {}'.format(avg_err))     # pretrained model (problem 1)
@@ -384,28 +386,28 @@ class RPSTester(object):
 
 def main():
 
-    epochs = 100
+    epochs = 200
     batchSize = 16
-    learningRate = 1e-5
+    learningRate = 5*1e-5
 
     # trainer = Trainer(epochs, batchSize, learningRate)
     # trainer.train()
 
-    tester_pretrained = Tester(batchSize, flag=0)   # 'flag=0' means pretrained model
-    tester_pretrained.test()
+    # tester_pretrained = Tester(batchSize, flag=0)   # 'flag=0' means pretrained model
+    # tester_pretrained.test()
 
     tester_finetuned = Tester(batchSize, flag=1)    # 'flag=1' means fine-tuned model
     tester_finetuned.test()
 
-    epochs_rps = 100
-    batchSize_rps = 16
-    learningRate_rps = 1e-5
+    # epochs_rps = 100
+    # batchSize_rps = 16
+    # learningRate_rps = 1e-5
 
     # trainer_rps = RPSTrainer(epochs_rps, batchSize_rps, learningRate_rps)
     # trainer_rps.train()
 
-    tester_rps = RPSTester(batchSize_rps)
-    tester_rps.test()
+    # tester_rps = RPSTester(batchSize_rps)
+    # tester_rps.test()
 
 
 if __name__ == '__main__':
