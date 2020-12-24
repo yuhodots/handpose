@@ -2,7 +2,5 @@
 .idea/
 __pycache__/
 *model.pth
-dataset/test/*
-dataset/train/*
 save/test/*
 save/rps/*
