@@ -1,4 +1,4 @@
-from model import CPM2DPose
+from model import CPM2DPose, RPSClassifier
 import torch
 import numpy as np
 import torchvision
@@ -53,30 +53,36 @@ class RPSDataset(Dataset):
         self.root = './'
         self.x_data = []
         self.y_data = []
-        if method == 'train':
-            self.img_path = sorted(glob(self.root + 'dataset/rps/train/' + '*.png'))
 
-        elif method == 'test':
-            self.img_path = sorted(glob(self.root + 'dataset/rps/test/' + '*.png'))
+        train_ratio = 0.9
+        RPS = ['rock', 'paper', 'scissors']
 
-        for i in tqdm.tqdm(range(len(self.img_path))):
-            img = cv2.imread(self.img_path[i], cv2.IMREAD_COLOR)
-            img = cv2.resize(img, dsize=(256, 256), interpolation=cv2.INTER_AREA)
-            b, g, r = cv2.split(img)
-            img = cv2.merge([r, g, b])
-            self.x_data.append(img)
+        for i in range(len(RPS)):
+            pose_label = RPS[i]
+            img_path = sorted(glob(self.root + 'dataset/rps/' + pose_label + '/rgb/*.jpg'))
 
-            str_label = self.img_path[i].split('.')[1].split('/')[-1].split('0')[0]
-            if str_label == 'paper':
-                label = np.array([0, 1, 0])
-            elif str_label == 'rock':
-                label = np.array([1, 0, 0])
-            else:   # str_label == scissor:
-                label = np.array([0, 0, 1])
-            self.y_data.append(label)
+            if method == 'train':
+                img_path = img_path[:int(0.9*len(img_path))]
+            else:    # method == 'train':
+                img_path = img_path[int(0.9*len(img_path)):]
+
+            for i in tqdm.tqdm(range(len(img_path))):
+                img = cv2.imread(img_path[i], cv2.IMREAD_COLOR)
+                # img = cv2.resize(img, dsize=(256, 256), interpolation=cv2.INTER_AREA)
+                b, g, r = cv2.split(img)
+                img = cv2.merge([r, g, b])
+                self.x_data.append(img)
+
+                if pose_label == 'rock':
+                    label = 0
+                elif pose_label == 'paper':
+                    label = 1
+                else:  # str_label == scissor:
+                    label = 2
+                self.y_data.append(label)
 
     def __len__(self):
-        return len(self.img_path)
+        return len(self.x_data)
 
     def __getitem__(self, idx):
         transform1 = torchvision.transforms.ToTensor()
@@ -267,6 +273,114 @@ class Tester(object):
             err += np.sqrt(np.square(Pred[i, 0] - GT[i, 0]) + np.square(Pred[i, 1] - GT[i, 1]))
         return err/num_joints
 
+class RPSTrainer(object):
+    def __init__(self, epochs, batch_size, lr):
+        self.epochs = epochs
+        self.batch_size = batch_size
+        self.learning_rate = lr
+        self._build_model()
+
+        dataset = RPSDataset(method='train')
+        self.root = './'
+        self.dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
+
+        # Load of pretrained_weight file
+        weight_root = self.root.split('/')
+        del weight_root[-2]
+        weight_root = "/".join(weight_root)
+        weight_PATH = weight_root + 'finetunedweight.pth'
+        self.poseNet.load_state_dict(torch.load(weight_PATH))
+
+        print("Training...")
+
+    def _build_model(self):
+        # 2d pose estimator
+        poseNet = CPM2DPose()
+        rpsNet = RPSClassifier()
+        self.poseNet = poseNet.to(device)
+        self.rpsNet = rpsNet.to(device)
+        self.rpsNet.train()
+
+        print('Finish build model.')
+
+    def train(self):
+
+        criterion = torch.nn.CrossEntropyLoss()
+        optimizer = torch.optim.Adam(self.rpsNet.parameters(), lr=self.learning_rate, betas=(0.9, 0.999), eps=1e-08)
+
+        for epoch in tqdm.tqdm(range(self.epochs + 1)):
+            if epoch % 20 == 0:
+                torch.save(self.rpsNet.state_dict(), "_".join(['./RPS', str(epoch), 'weight.pth']))
+
+            for batch_idx, samples in enumerate(self.dataloader):
+                x_train, y_train = samples
+                heatmapsPoseNet = self.poseNet(x_train.cuda())
+                y_predict = self.rpsNet(heatmapsPoseNet)
+                loss = criterion(y_predict, y_train.cuda())
+
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+
+                # Write train result
+                if batch_idx % 20 == 0:
+                    with open('train_result_RPS.txt', 'a') as f:
+                        f.write('Epoch {:4d}/{} Batch {}/{}\n'.format(
+                            epoch, self.epochs, batch_idx, len(self.dataloader)
+                        ))
+                    print('Epoch {:4d}/{} Batch {}/{}'.format(
+                        epoch, self.epochs, batch_idx, len(self.dataloader)
+                    ))
+
+        print('Finish training.')
+
+class RPSTester(object):
+    def __init__(self, batch_size):
+        self.batch_size = batch_size
+        self._build_model()
+
+        dataset = RPSDataset(method='test')
+        self.root = './'
+        self.dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False)
+        self.mse_all_img = []
+
+        # Load of pretrained_weight file
+        weight_root = self.root.split('/')
+        del weight_root[-2]
+        weight_root = "/".join(weight_root)
+        weight_PATH_1 = weight_root + 'finetunedweight.pth'
+        weight_PATH_2 = weight_root + 'rpsweight.pth'
+        self.poseNet.load_state_dict(torch.load(weight_PATH_1))
+        self.rpsNet.load_state_dict(torch.load(weight_PATH_2))
+
+        print("Testing...")
+
+    def _build_model(self):
+        poseNet = CPM2DPose()
+        rpsNet = RPSClassifier()
+        self.poseNet = poseNet.to(device)
+        self.rpsNet = rpsNet.to(device)
+
+        print('Finish build model.')
+
+    def test(self):
+
+        total = 0
+        for batch_idx, samples in enumerate(self.dataloader):
+            acc = 0
+            x_test, y_test = samples
+            heatmapsPoseNet = self.poseNet(x_test.cuda())
+            y_predict = self.rpsNet(heatmapsPoseNet.cuda()).cpu().detach().numpy()
+            y_predict = np.argmax(y_predict, axis=1)
+
+            for i in range(x_test.shape[0]):
+                acc += (y_test[i] == y_predict[i])
+                total += (y_test[i] == y_predict[i])
+
+            # print('Mean accuracy of RPS batch = {}%'.format(100 * (acc/x_test.shape[0])))
+
+        print('Total accuracy = {}%'.format(100 * (total/300)))
+
 
 def main():
 
@@ -282,6 +396,16 @@ def main():
 
     tester_finetuned = Tester(batchSize, flag=1)    # 'flag=1' means fine-tuned model
     tester_finetuned.test()
+
+    epochs_rps = 100
+    batchSize_rps = 16
+    learningRate_rps = 1e-5
+
+    # trainer_rps = RPSTrainer(epochs_rps, batchSize_rps, learningRate_rps)
+    # trainer_rps.train()
+
+    tester_rps = RPSTester(batchSize_rps)
+    tester_rps.test()
 
 
 if __name__ == '__main__':

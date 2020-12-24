@@ -105,3 +105,27 @@ class CPM2DPose(nn.Module):
         x = self.relu(self.conv7_6(x))
         x = self.conv7_7(x)
         return x
+
+class RPSClassifier(nn.Module):
+    def __init__(self):
+        super(RPSClassifier, self).__init__()
+
+        self.relu = F.leaky_relu
+        self.conv1 = nn.Conv2d(21, 64, kernel_size=3, stride=1, padding=1, bias=True)
+        self.conv2 = nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1, bias=True)
+        self.maxpool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
+        self.flatten = nn.Flatten()
+        self.fc1 = nn.Linear(8192, 500)
+        self.fc2 = nn.Linear(500, 30)
+        self.fc3 = nn.Linear(30, 3)
+
+    def forward(self, x):
+        x = self.relu(self.conv1(x))
+        x = self.maxpool(x)
+        x = self.relu(self.conv2(x))
+        x = self.maxpool(x)
+        x = self.flatten(x)
+        x = self.relu(self.fc1(x))
+        x = self.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
