@@ -139,7 +139,8 @@ class Trainer(object):
     def train(self):
 
         criterion = torch.nn.MSELoss()
-        optimizer = torch.optim.Adam(self.poseNet.parameters(), lr=self.learning_rate, betas=(0.9, 0.999), eps=1e-08, weight_decay = 5*1e-6, amsgrad = True)
+        optimizer = torch.optim.Adam(self.poseNet.parameters(), lr=self.learning_rate,
+                                     betas=(0.9, 0.999), eps=1e-08, weight_decay = 5*1e-6, amsgrad = True)
         scheduler = lr_scheduler.ReduceLROnPlateau(optimizer)
 
         date = '201201'
@@ -191,7 +192,7 @@ class Tester(object):
         if flag == 0:
             weight_PATH = weight_root + 'pretrained_weight.pth'     # pretrained model (problem 1)
         else:
-            weight_PATH = weight_root + 'fine40.pth'     # fine-tuned model (problem 3)
+            weight_PATH = weight_root + 'finetunedweight.pth'     # fine-tuned model (problem 3)
         self.poseNet.load_state_dict(torch.load(weight_PATH))
 
         print("Testing...")
@@ -308,7 +309,8 @@ class RPSTrainer(object):
     def train(self):
 
         criterion = torch.nn.CrossEntropyLoss()
-        optimizer = torch.optim.Adam(self.rpsNet.parameters(), lr=self.learning_rate, betas=(0.9, 0.999), eps=1e-08)
+        optimizer = torch.optim.Adam(self.rpsNet.parameters(), lr=self.learning_rate,
+                                     betas=(0.9, 0.999), eps=1e-08, weight_decay=5 * 1e-6, amsgrad=True)
 
         for epoch in tqdm.tqdm(range(self.epochs + 1)):
             if epoch % 20 == 0:
@@ -381,7 +383,7 @@ class RPSTester(object):
 
             # print('Mean accuracy of RPS batch = {}%'.format(100 * (acc/x_test.shape[0])))
 
-        print('Total accuracy = {}%'.format(100 * (total/300)))
+        print('Total accuracy = {:.2f}%'.format(100 * (total/300)))
 
 
 def main():
@@ -399,15 +401,15 @@ def main():
     tester_finetuned = Tester(batchSize, flag=1)    # 'flag=1' means fine-tuned model
     tester_finetuned.test()
 
-    # epochs_rps = 100
-    # batchSize_rps = 16
-    # learningRate_rps = 1e-5
+    epochs_rps = 300
+    batchSize_rps = 16
+    learningRate_rps = 1e-5
 
     # trainer_rps = RPSTrainer(epochs_rps, batchSize_rps, learningRate_rps)
     # trainer_rps.train()
 
-    # tester_rps = RPSTester(batchSize_rps)
-    # tester_rps.test()
+    tester_rps = RPSTester(batchSize_rps)
+    tester_rps.test()
 
 
 if __name__ == '__main__':
