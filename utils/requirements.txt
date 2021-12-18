@@ -15,7 +15,7 @@ mkl-service==2.3.0
 networkx==2.5
 numpy @ file:///tmp/build/80754af9/numpy_and_numpy_base_1596233737064/work
 olefile==0.46
-opencv-python==4.1.2.30
+opencv-python==4.2.0.32
 pandas @ file:///tmp/build/80754af9/pandas_1602088135163/work
 Pillow @ file:///tmp/build/80754af9/pillow_1603822238230/work
 protobuf==3.13.0
