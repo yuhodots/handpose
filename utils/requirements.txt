@@ -18,7 +18,7 @@ olefile==0.46
 opencv-python==4.2.0.32
 pandas @ file:///tmp/build/80754af9/pandas_1602088135163/work
 Pillow @ file:///tmp/build/80754af9/pillow_1603822238230/work
-protobuf==3.13.0
+protobuf==3.15.0
 pycparser @ file:///tmp/build/80754af9/pycparser_1594388511720/work
 pyparsing==2.4.7
 pyrealsense2==2.31.0.1235
